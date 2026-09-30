@@ -1,12 +1,13 @@
 <?php
 
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Halaman Utama Repositori FITE
+Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Dashboard autentikasi bawaan Breeze
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
