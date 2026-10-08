@@ -1,34 +1,62 @@
-# Sistem Informasi Arsip Berkas Digital FITE
+# Sistem Manajemen File FITE
 
-Platform repositori digital terintegrasi Fakultas Informatika dan Teknik Elektro (FITE) berbasis RESTful API dengan backend Golang dan frontend Next.js.
+Sistem Informasi Arsip Berkas Digital Fakultas Informatika dan Teknik Elektro (FITE) untuk tiga program studi: S1 Informatika, S1 Sistem Informasi, dan S1 Teknik Elektro.
 
-## 🛠️ Tech Stack & Spesifikasi
-- **Backend:** Go (v1.22+) dengan framework Gin & GORM
-- **Frontend:** Next.js (App Router), React, TypeScript, Tailwind CSS
-- **Database:** MySQL 8.x (Engine InnoDB, Collation utf8mb4_unicode_ci)
-- **Object Storage:** Google Cloud Storage (GCS)
-- **Database Migration:** golang-migrate
-- **Otentikasi:** JWT Access Token (Bearer, 15 Menit) + Refresh Token (httpOnly Cookie, 7 Hari)
+Spesifikasi lengkap (kebutuhan, test case, REST API, basis data) ada di [`docs/SRS-FITE.pdf`](docs/SRS-FITE.pdf).
 
----
+## Teknologi
 
-## 👥 Struktur Tim & Tanggung Jawab
-- **Dev 1 (Team Lead):** Database Migration, Core Backend Foundation, Auth & Session Engine
-- **Dev 2:** Document Management API, GCS Storage Handler, Verification & Retention Worker
-- **Dev 3:** Next.js Foundation, Auth Context & Memory Token, App Shell & Dashboard UI
-- **Dev 4:** Document Explorer UI, Upload Modal, Verification Panel, Public Repository UI
+| Lapisan | Teknologi |
+|---|---|
+| Backend | Go 1.22+, Gin, GORM |
+| Frontend | Next.js (App Router, TypeScript) |
+| Basis data | MySQL 8.0.16+ |
+| Penyimpanan berkas | Google Cloud Storage |
+| Autentikasi | JWT access token (15 menit) + refresh token httpOnly cookie (7 hari, dirotasi) |
 
----
+## Struktur repositori
 
-## 🚀 Panduan Menjalankan Proyek di Lokal
+```
+.
+├── backend/              # REST API Go
+│   ├── cmd/api/          # titik masuk server HTTP
+│   ├── internal/
+│   │   ├── config/       # pemuatan dan validasi konfigurasi env
+│   │   ├── apperr/       # galat domain -> status HTTP + kode
+│   │   ├── httpx/        # format respons, binding, validasi
+│   │   └── router/       # rute dan middleware
+│   └── migrations/       # SQL golang-migrate
+├── frontend/             # Next.js (fase 8)
+├── docs/                 # SRS dan dokumen pendukung
+├── docker-compose.yml    # MySQL lokal
+└── Makefile
+```
 
-### 1. Prasyarat Sistem
-- Go Compiler (v1.22 atau lebih baru)
-- Node.js (LTS v20+) & npm
-- MySQL Server 8.x (berjalan di Laragon atau native service port 3306)
-- Git CLI
+## Menjalankan (lokal)
 
-### 2. Konfigurasi Database (MySQL)
-Buat database baru di MySQL CLI atau HeidiSQL:
-```sql
-CREATE DATABASE fite_arsip CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+Prasyarat: Go 1.22+, Docker.
+
+```bash
+cp backend/.env.example backend/.env
+make db-up        # MySQL di localhost:3306
+make tidy         # unduh dependensi Go
+make api          # API di http://localhost:8080
+curl http://localhost:8080/api/v1/health
+```
+
+## Fase pengembangan
+
+| Fase | Isi | Status |
+|---|---|---|
+| 1 | Fondasi proyek: struktur, konfigurasi, galat, respons, health check | Selesai |
+| 2 | Migrasi basis data (9 tabel) dan seed | Berikutnya |
+| 3 | Model domain GORM dan abstraksi penyimpanan | |
+| 4 | Autentikasi: login, refresh, logout, middleware | |
+| 5 | Unggah dan validasi berkas (GCS) | |
+| 6 | Daftar, pencarian, unduh, hapus, dan verifikasi berkas | |
+| 7 | Notifikasi, pengguna, dasbor, dan worker retensi | |
+| 8 | Frontend Next.js | |
+
+## Catatan
+
+Kode backend ditulis mengikuti Bab 5 SRS dan belum diuji secara menyeluruh. Jangan menyimpan `.env` atau kunci GCS di repositori.
