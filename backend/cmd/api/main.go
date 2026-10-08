@@ -13,6 +13,7 @@ import (
 	"fite-arsip-api/internal/config"
 	"fite-arsip-api/internal/router"
 
+	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -20,6 +21,9 @@ import (
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+
+	// Membaca backend/.env bila ada (pengembangan lokal). Di server, variabel datang dari lingkungan.
+	_ = godotenv.Load()
 
 	cfg, err := config.Load()
 	if err != nil {
