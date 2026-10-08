@@ -1,0 +1,27 @@
+# Env & rahasia
+.env
+.env.*
+!.env.example
+*.pem
+*service-account*.json
+
+# Go
+backend/bin/
+backend/tmp/
+*.test
+*.out
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Laravel lama (sudah tidak dipakai)
+vendor/
+fite-app/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
