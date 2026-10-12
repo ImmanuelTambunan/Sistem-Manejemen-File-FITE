@@ -57,6 +57,8 @@ curl http://localhost:8080/api/v1/health
 | 7 | Notifikasi, pengguna, dasbor, dan worker retensi | |
 | 8 | Frontend Next.js | |
 
+---
+
 ## Catatan
 
 Kode backend ditulis mengikuti Bab 5 SRS dan belum diuji secara menyeluruh. Jangan menyimpan `.env` atau kunci GCS di repositori.
