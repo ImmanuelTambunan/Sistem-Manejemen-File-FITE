@@ -76,9 +76,13 @@ func Load() (Config, error) {
 	if c.AllowedOrigin == "" {
 		problems = append(problems, "ALLOWED_ORIGIN wajib")
 	}
-	// GCS_BUCKET mulai diwajibkan pada fase penyimpanan berkas (fase 5).
-	if c.IsProd() && !c.CookieSecure {
-		problems = append(problems, "COOKIE_SECURE wajib true di production")
+	if c.IsProd() {
+		if !c.CookieSecure {
+			problems = append(problems, "COOKIE_SECURE wajib true di production")
+		}
+		if c.GCSBucket == "" {
+			problems = append(problems, "GCS_BUCKET wajib di production")
+		}
 	}
 	if len(problems) > 0 {
 		return c, errors.New("konfigurasi tidak valid: " + strings.Join(problems, "; "))

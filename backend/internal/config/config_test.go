@@ -27,17 +27,17 @@ func setEnvMap(env map[string]string) func() {
 
 func TestConfigLoadSuccess(t *testing.T) {
 	cleanup := setEnvMap(map[string]string{
-		"APP_ENV":        "development",
-		"HTTP_ADDR":      ":8080",
-		"DB_DSN":         "fite_app:secret@tcp(127.0.0.1:3306)/fite_arsip",
-		"JWT_SECRET":     "1234567890123456789012345678901234",
-		"ALLOWED_ORIGIN": "http://localhost:3000",
-		"ACCESS_TTL":     "15m",
-		"REFRESH_TTL":    "168h",
-		"SESSION_MAX_AGE": "720h",
-		"RETENTION_YEARS": "8",
+		"APP_ENV":              "development",
+		"HTTP_ADDR":            ":8080",
+		"DB_DSN":               "fite_app:secret@tcp(127.0.0.1:3306)/fite_arsip",
+		"JWT_SECRET":           "1234567890123456789012345678901234",
+		"ALLOWED_ORIGIN":       "http://localhost:3000",
+		"ACCESS_TTL":           "15m",
+		"REFRESH_TTL":          "168h",
+		"SESSION_MAX_AGE":      "720h",
+		"RETENTION_YEARS":      "8",
 		"RETENTION_GRACE_DAYS": "90",
-		"TIMEZONE":       "Asia/Jakarta",
+		"TIMEZONE":             "Asia/Jakarta",
 	})
 	defer cleanup()
 
@@ -74,5 +74,22 @@ func TestConfigValidationFailures(t *testing.T) {
 	_, err := config.Load()
 	if err == nil {
 		t.Fatal("expected config.Load to fail due to missing required fields")
+	}
+}
+
+func TestConfigProductionValidation(t *testing.T) {
+	cleanup := setEnvMap(map[string]string{
+		"APP_ENV":        "production",
+		"DB_DSN":         "fite_app:secret@tcp(127.0.0.1:3306)/fite_arsip",
+		"JWT_SECRET":     "1234567890123456789012345678901234",
+		"ALLOWED_ORIGIN": "https://arsip.fite.del.ac.id",
+		"COOKIE_SECURE":  "false",
+		"GCS_BUCKET":     "",
+	})
+	defer cleanup()
+
+	_, err := config.Load()
+	if err == nil {
+		t.Fatal("expected config.Load to fail in production with missing GCS_BUCKET and insecure cookie")
 	}
 }
