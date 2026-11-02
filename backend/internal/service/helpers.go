@@ -44,8 +44,13 @@ func cancelVerification(tx *gorm.DB, docID uint) error {
 	if err := tx.Where("document_id = ?", docID).Delete(&domain.Verification{}).Error; err != nil {
 		return err
 	}
-	return tx.Where("type = ? AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.document_id')) = ?",
-		"verification_pending", strconv.FormatUint(uint64(docID), 10)).Delete(&domain.Notification{}).Error
+	idStr := strconv.FormatUint(uint64(docID), 10)
+	if tx.Dialector != nil && tx.Dialector.Name() == "mysql" {
+		return tx.Where("type = ? AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.document_id')) = ?",
+			"verification_pending", idStr).Delete(&domain.Notification{}).Error
+	}
+	return tx.Where("type = ? AND (JSON_EXTRACT(data, '$.document_id') = ? OR JSON_EXTRACT(data, '$.document_id') = ?)",
+		"verification_pending", idStr, docID).Delete(&domain.Notification{}).Error
 }
 
 // openVerification membuka (atau membuka ulang) antrean dan memberi tahu BAAK dan Super Admin.
