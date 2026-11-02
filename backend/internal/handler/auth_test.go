@@ -69,9 +69,11 @@ func setupHandlerTestEnv(t *testing.T) (*gin.Engine, *gorm.DB, *service.AuthServ
 	authed := api.Group("", middleware.Auth(authSvc))
 	authed.GET("/auth/me", httpx.Wrap(authHandler.Me))
 	authed.PUT("/auth/password", httpx.Wrap(authHandler.ChangePassword))
+	authed.POST("/auth/change-password", httpx.Wrap(authHandler.ChangePassword))
 
 	g := authed.Group("", middleware.EnforcePasswordChange())
 	g.PUT("/auth/profile", httpx.Wrap(authHandler.UpdateProfile))
+	g.PATCH("/auth/profile", httpx.Wrap(authHandler.UpdateProfile))
 	g.GET("/test-guarded", func(c *gin.Context) {
 		httpx.OK(c, http.StatusOK, "guarded ok", nil)
 	})
@@ -224,5 +226,100 @@ func TestAuthHandler_MustChangePasswordEnforcement(t *testing.T) {
 	_ = json.Unmarshal(wGuarded.Body.Bytes(), &failResp)
 	if failResp["code"] != "password_change_required" {
 		t.Errorf("expected code=password_change_required, got %v", failResp["code"])
+	}
+}
+
+
+func TestAuthHandler_ChangePasswordAndProfile(t *testing.T) {
+	r, db, _, _ := setupHandlerTestEnv(t)
+	seedUserForHandler(t, db, domain.RoleMahasiswa, "change_test@fite.id", "Secret123", true, false)
+
+	// 1. Login
+	loginPayload := `{"email":"change_test@fite.id","password":"Secret123"}`
+	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(loginPayload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	var loginResp struct {
+		Data struct {
+			AccessToken string `json:"access_token"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	token := loginResp.Data.AccessToken
+
+	// 2. PATCH /api/v1/auth/profile
+	profilePayload := `{"name":"Updated Name","phone":"081234567890"}`
+	profReq := httptest.NewRequest("PATCH", "/api/v1/auth/profile", bytes.NewBufferString(profilePayload))
+	profReq.Header.Set("Content-Type", "application/json")
+	profReq.Header.Set("Authorization", "Bearer "+token)
+	wProf := httptest.NewRecorder()
+	r.ServeHTTP(wProf, profReq)
+
+	if wProf.Code != http.StatusOK {
+		t.Fatalf("expected 200 on PATCH profile, got %d: %s", wProf.Code, wProf.Body.String())
+	}
+
+	// 3. POST /api/v1/auth/change-password
+	changePayload := `{"current_password":"Secret123","password":"NewSecret123","password_confirmation":"NewSecret123"}`
+	pwReq := httptest.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBufferString(changePayload))
+	pwReq.Header.Set("Content-Type", "application/json")
+	pwReq.Header.Set("Authorization", "Bearer "+token)
+	wPw := httptest.NewRecorder()
+	r.ServeHTTP(wPw, pwReq)
+
+	if wPw.Code != http.StatusOK {
+		t.Fatalf("expected 200 on POST change-password, got %d: %s", wPw.Code, wPw.Body.String())
+	}
+
+	// 4. Login with old password should fail
+	oldLoginReq := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(loginPayload))
+	oldLoginReq.Header.Set("Content-Type", "application/json")
+	wOld := httptest.NewRecorder()
+	r.ServeHTTP(wOld, oldLoginReq)
+	if wOld.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 with old password, got %d", wOld.Code)
+	}
+
+	// 5. Login with new password should succeed
+	newLoginPayload := `{"email":"change_test@fite.id","password":"NewSecret123"}`
+	newLoginReq := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(newLoginPayload))
+	newLoginReq.Header.Set("Content-Type", "application/json")
+	wNew := httptest.NewRecorder()
+	r.ServeHTTP(wNew, newLoginReq)
+	if wNew.Code != http.StatusOK {
+		t.Fatalf("expected 200 with new password, got %d", wNew.Code)
+	}
+}
+
+func TestAuthHandler_LoginFailureRateLimiter(t *testing.T) {
+	r, db, _, _ := setupHandlerTestEnv(t)
+	seedUserForHandler(t, db, domain.RoleMahasiswa, "rl_test@fite.id", "Secret123", true, false)
+
+	wrongPayload := `{"email":"rl_test@fite.id","password":"WrongPassword"}`
+
+	// 5 failed attempts
+	for i := 0; i < 5; i++ {
+		req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(wrongPayload))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusUnauthorized {
+			t.Fatalf("expected 401 at attempt %d, got %d", i+1, w.Code)
+		}
+	}
+
+	// 6th attempt should return 429 Too Many Requests
+	req := httptest.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString(wrongPayload))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Fatalf("expected 429 Too Many Requests, got %d: %s", w.Code, w.Body.String())
+	}
+	if w.Header().Get("Retry-After") == "" {
+		t.Errorf("expected Retry-After header on 429 response")
 	}
 }

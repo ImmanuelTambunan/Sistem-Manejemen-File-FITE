@@ -70,10 +70,12 @@ func New(cfg config.Config, auth *service.AuthService, h Handlers, ready func(co
 	authed := api.Group("", middleware.Auth(auth), userLimiter.Middleware())
 	authed.GET("/auth/me", w(h.Auth.Me)) // boleh walau wajib ganti sandi
 	authed.PUT("/auth/password", w(h.Auth.ChangePassword))
+	authed.POST("/auth/change-password", w(h.Auth.ChangePassword))
 
 	// ---- semua rute lain: wajib sudah mengganti sandi awal ----
 	g := authed.Group("", middleware.EnforcePasswordChange())
 	g.PUT("/auth/profile", w(h.Auth.UpdateProfile))
+	g.PATCH("/auth/profile", w(h.Auth.UpdateProfile))
 
 	sa := middleware.RequireRoles(domain.RoleSuperAdmin)
 	verifier := middleware.RequireRoles(domain.RoleBaak, domain.RoleSuperAdmin)
