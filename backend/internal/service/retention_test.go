@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -181,5 +182,125 @@ func TestRetentionService_Cycles(t *testing.T) {
 	}
 	if rep2.SoftDeleted != 0 || rep2.HardDeleted != 0 {
 		t.Errorf("expected 0 soft and 0 hard on second run, got soft=%d hard=%d", rep2.SoftDeleted, rep2.HardDeleted)
+	}
+}
+
+
+func TestRetentionService_SessionPurge(t *testing.T) {
+	now := time.Date(2028, 3, 1, 10, 0, 0, 0, time.UTC)
+	db := setupTestDB(t)
+
+	memStore := storage.NewMemoryStorage()
+	cfg := config.Config{RetentionYears: 8, GraceDays: 90}
+	retSvc := service.NewRetentionService(db, memStore, cfg)
+	retSvc.Now = func() time.Time { return now }
+	ctx := context.Background()
+
+	// 1. Session older than 30 days (expires_at = 31 days ago) -> should be purged
+	tOld := now.AddDate(0, 0, -31)
+	sOld := domain.AuthSession{
+		ID:                "sess-old-31d",
+		UserID:            1,
+		RefreshTokenHash:  "hash-old",
+		ExpiresAt:         tOld,
+		AbsoluteExpiresAt: tOld,
+	}
+	db.Create(&sOld)
+
+	// 2. Active session (expires_at = 5 days from now) -> should be preserved
+	tActive := now.AddDate(0, 0, 5)
+	sActive := domain.AuthSession{
+		ID:                "sess-active",
+		UserID:            1,
+		RefreshTokenHash:  "hash-active",
+		ExpiresAt:         tActive,
+		AbsoluteExpiresAt: now.AddDate(0, 0, 20),
+	}
+	db.Create(&sActive)
+
+	// 3. Recently revoked session (revoked_at = 5 days ago) -> preserved for audit
+	tRecentRevoke := now.AddDate(0, 0, -5)
+	sRevoked := domain.AuthSession{
+		ID:                "sess-recent-revoke",
+		UserID:            1,
+		RefreshTokenHash:  "hash-recent-revoke",
+		ExpiresAt:         tActive,
+		AbsoluteExpiresAt: now.AddDate(0, 0, 20),
+		RevokedAt:         &tRecentRevoke,
+	}
+	db.Create(&sRevoked)
+
+	rep, err := retSvc.Run(ctx)
+	if err != nil {
+		t.Fatalf("retention run failed: %v", err)
+	}
+
+	if rep.Sessions != 1 {
+		t.Errorf("expected 1 session purged, got %d", rep.Sessions)
+	}
+
+	var countActive, countOld, countRevoked int64
+	db.Model(&domain.AuthSession{}).Where("id = ?", "sess-active").Count(&countActive)
+	db.Model(&domain.AuthSession{}).Where("id = ?", "sess-old-31d").Count(&countOld)
+	db.Model(&domain.AuthSession{}).Where("id = ?", "sess-recent-revoke").Count(&countRevoked)
+
+	if countActive != 1 {
+		t.Errorf("expected active session to remain")
+	}
+	if countOld != 0 {
+		t.Errorf("expected old session to be deleted")
+	}
+	if countRevoked != 1 {
+		t.Errorf("expected recently revoked session to remain")
+	}
+}
+
+type failingDeleteStorage struct {
+	storage.Storage
+}
+
+func (f *failingDeleteStorage) Delete(ctx context.Context, path string) error {
+	return errors.New("simulated network timeout deleting from GCS")
+}
+
+func TestRetentionService_GCSFailureRollback(t *testing.T) {
+	now := time.Date(2028, 3, 1, 10, 0, 0, 0, time.UTC)
+	db := setupTestDB(t)
+
+	baseMem := storage.NewMemoryStorage()
+	failingStore := &failingDeleteStorage{Storage: baseMem}
+	cfg := config.Config{RetentionYears: 8, GraceDays: 90}
+	retSvc := service.NewRetentionService(db, failingStore, cfg)
+	retSvc.Now = func() time.Time { return now }
+	ctx := context.Background()
+
+	// Soft-deleted 95 days ago -> eligible for hard delete
+	tDeleted := now.AddDate(0, 0, -95)
+	doc := domain.Document{
+		ID:           999,
+		Title:        "Doc Fail GCS",
+		StoragePath:  "path_fail.pdf",
+		DeletedAt:    gorm.DeletedAt{Time: tDeleted, Valid: true},
+	}
+	db.Create(&doc)
+
+	rep, err := retSvc.Run(ctx)
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	// GCS delete failed, so document transaction was rolled back
+	if rep.Failed != 1 {
+		t.Errorf("expected rep.Failed = 1, got %d", rep.Failed)
+	}
+	if rep.HardDeleted != 0 {
+		t.Errorf("expected rep.HardDeleted = 0 on failure, got %d", rep.HardDeleted)
+	}
+
+	// Document should still exist in database for next retry
+	var count int64
+	db.Unscoped().Model(&domain.Document{}).Where("id = ?", 999).Count(&count)
+	if count != 1 {
+		t.Errorf("expected document to still exist in DB after GCS delete failure")
 	}
 }
