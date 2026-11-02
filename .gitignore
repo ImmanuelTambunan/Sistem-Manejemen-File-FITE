@@ -15,6 +15,7 @@ backend/tmp/
 frontend/node_modules/
 frontend/.next/
 frontend/out/
+*.tsbuildinfo
 
 # Laravel lama (sudah tidak dipakai)
 vendor/
