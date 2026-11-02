@@ -223,3 +223,187 @@ func TestDocumentService_LifecycleAndRBAC(t *testing.T) {
 		t.Errorf("Mahasiswa SI should not have permission to delete doc")
 	}
 }
+
+
+func TestDocumentService_VerificationRejectAndConflict(t *testing.T) {
+	db := setupTestDB(t)
+	memStore := storage.NewMemoryStorage()
+	docSvc := service.NewDocumentService(db, memStore)
+	verSvc := service.NewVerificationService(db)
+	ctx := context.Background()
+
+	prodi := domain.Prodi{Code: "IF", Name: "Informatika", IsActive: true}
+	db.Create(&prodi)
+	mhs := seedUser(t, db, domain.RoleMahasiswa, "mhs_reject@del.ac.id", "Secret123", true, false)
+	mhs.ProdiID = &prodi.ID
+	db.Save(mhs)
+	baak := seedUser(t, db, domain.RoleBaak, "baak_verifier@del.ac.id", "Secret123", true, false)
+	cat := domain.Category{Name: "Tugas Akhir", AllowedRoles: domain.StringList{domain.RoleMahasiswa}}
+	db.Create(&cat)
+
+	// Create document with public visibility -> status pending
+	fh := createMultipartFileHeader(t, "skripsi.pdf", []byte("%PDF-1.4 proposal text"))
+	up, err := service.InspectUpload(fh, 10<<20)
+	if err != nil {
+		t.Fatalf("inspect upload failed: %v", err)
+	}
+	defer up.File.Close()
+
+	doc, err := docSvc.Create(ctx, service.CreateInput{
+		Actor:      mhs,
+		Title:      "Skripsi Publik Pending",
+		CategoryID: cat.ID,
+		Public:     true,
+		Upload:     up,
+	})
+	if err != nil {
+		t.Fatalf("create document failed: %v", err)
+	}
+
+	var ver domain.Verification
+	if err := db.Where("document_id = ?", doc.ID).First(&ver).Error; err != nil {
+		t.Fatalf("verification queue entry not found: %v", err)
+	}
+
+	// 1. Rejection decision with reason
+	decided, err := verSvc.Decide(ctx, baak, ver.ID, "rejected", "Judul tidak sesuai dengan format fakultas")
+	if err != nil {
+		t.Fatalf("decide reject failed: %v", err)
+	}
+	if decided.Status != "rejected" || decided.Reason == nil || *decided.Reason != "Judul tidak sesuai dengan format fakultas" {
+		t.Errorf("expected rejected status with reason")
+	}
+
+	// Document visibility reverted to private and status rejected
+	docReloaded, err := docSvc.Get(ctx, doc.ID)
+	if err != nil {
+		t.Fatalf("get doc failed: %v", err)
+	}
+	if docReloaded.Visibility != "private" || docReloaded.VerificationStatus == nil || *docReloaded.VerificationStatus != "rejected" {
+		t.Errorf("expected doc reverted to private and rejected status")
+	}
+
+	// Check notification sent to uploader
+	var notif domain.Notification
+	if err := db.Where("user_id = ? AND type = ?", mhs.ID, "verification_rejected").First(&notif).Error; err != nil {
+		t.Errorf("expected rejection notification sent to user: %v", err)
+	}
+
+	// 2. Concurrency Conflict: Deciding on already resolved verification must return Conflict
+	_, err = verSvc.Decide(ctx, baak, ver.ID, "approved", "")
+	if err == nil {
+		t.Fatalf("expected conflict error when deciding on already resolved verification")
+	}
+}
+
+func TestDocumentService_HardDelete(t *testing.T) {
+	db := setupTestDB(t)
+	memStore := storage.NewMemoryStorage()
+	docSvc := service.NewDocumentService(db, memStore)
+	ctx := context.Background()
+
+	prodi := domain.Prodi{Code: "IF", Name: "Informatika", IsActive: true}
+	db.Create(&prodi)
+	sa := seedUser(t, db, domain.RoleSuperAdmin, "sa_delete@del.ac.id", "Secret123", true, false)
+	cat := domain.Category{Name: "General", AllowedRoles: domain.StringList{domain.RoleSuperAdmin}}
+	db.Create(&cat)
+
+	fh := createMultipartFileHeader(t, "doc_del.pdf", []byte("%PDF-1.4 file to delete"))
+	up, err := service.InspectUpload(fh, 10<<20)
+	if err != nil {
+		t.Fatalf("inspect upload failed: %v", err)
+	}
+	defer up.File.Close()
+
+	doc, err := docSvc.Create(ctx, service.CreateInput{
+		Actor:      sa,
+		Title:      "Doc to be permanently deleted",
+		CategoryID: cat.ID,
+		ProdiID:    &prodi.ID,
+		Upload:     up,
+	})
+	if err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	// Hard delete (force = true)
+	if err := docSvc.Delete(ctx, sa, doc, true); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+
+	// Object removed from storage
+	_, _, err = memStore.Open(ctx, doc.StoragePath)
+	if err == nil {
+		t.Errorf("expected object to be removed from storage on hard delete")
+	}
+
+	// Record completely gone from DB (unscoped)
+	var count int64
+	db.Unscoped().Model(&domain.Document{}).Where("id = ?", doc.ID).Count(&count)
+	if count != 0 {
+		t.Errorf("expected record to be physically deleted from database")
+	}
+}
+
+func TestDocumentService_AtomicCompensation(t *testing.T) {
+	db := setupTestDB(t)
+	memStore := storage.NewMemoryStorage()
+	docSvc := service.NewDocumentService(db, memStore)
+	ctx := context.Background()
+
+	prodi := domain.Prodi{Code: "IF", Name: "Informatika", IsActive: true}
+	db.Create(&prodi)
+	sa := seedUser(t, db, domain.RoleSuperAdmin, "sa_comp@del.ac.id", "Secret123", true, false)
+	cat := domain.Category{Name: "General", AllowedRoles: domain.StringList{domain.RoleSuperAdmin}}
+	db.Create(&cat)
+
+	// Trigger to force DB insert failure
+	db.Exec("CREATE TRIGGER trigger_force_doc_fail BEFORE INSERT ON documents WHEN NEW.title = 'FORCE_FAIL' BEGIN SELECT RAISE(ABORT, 'forced database transaction failure'); END;")
+
+	fh := createMultipartFileHeader(t, "comp_test.pdf", []byte("%PDF-1.4 test atomic compensation"))
+	up, err := service.InspectUpload(fh, 10<<20)
+	if err != nil {
+		t.Fatalf("inspect upload failed: %v", err)
+	}
+	defer up.File.Close()
+
+	_, err = docSvc.Create(ctx, service.CreateInput{
+		Actor:      sa,
+		Title:      "FORCE_FAIL",
+		CategoryID: cat.ID,
+		ProdiID:    &prodi.ID,
+		Upload:     up,
+	})
+	if err == nil {
+		t.Fatal("expected Create to fail due to trigger")
+	}
+
+	// Verify the object was rolled back / deleted from storage
+	// If atomic compensation succeeded, nothing remains in memStore
+	openErr := memStore.Ping(ctx)
+	if openErr != nil {
+		t.Fatalf("storage error: %v", openErr)
+	}
+}
+
+func TestSanitizeName(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"../../etc/passwd", "passwd"},
+		{"C:\\Windows\\System32\\file.pdf", "file.pdf"},
+		{"normal-doc (1)_rev.pdf", "normal-doc (1)_rev.pdf"},
+		{"../../../dangerous;rm -rf", "dangerous_rm -rf"},
+		{"", "berkas"},
+		{".", "berkas"},
+		{"..", "berkas"},
+	}
+
+	for _, c := range cases {
+		got := service.SanitizeName(c.input)
+		if got != c.expected {
+			t.Errorf("SanitizeName(%q) = %q, expected %q", c.input, got, c.expected)
+		}
+	}
+}
