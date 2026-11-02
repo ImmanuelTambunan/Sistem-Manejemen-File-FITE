@@ -1,0 +1,21 @@
+CREATE TABLE document_verifications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  document_id BIGINT UNSIGNED NOT NULL,
+  status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  reason VARCHAR(500) NULL,
+  requested_by BIGINT UNSIGNED NOT NULL,
+  verified_by BIGINT UNSIGNED NULL,
+  requested_at DATETIME(3) NOT NULL,
+  verified_at DATETIME(3) NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_verifications_document (document_id),
+  KEY idx_verifications_status (status, requested_at),
+  KEY idx_verifications_requested_by (requested_by),
+  KEY idx_verifications_verified_by (verified_by),
+  CONSTRAINT fk_verifications_document FOREIGN KEY (document_id) REFERENCES documents (id) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT fk_verifications_requester FOREIGN KEY (requested_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT fk_verifications_verifier FOREIGN KEY (verified_by) REFERENCES users (id) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT chk_verifications_rejected_reason CHECK (status <> 'rejected' OR reason IS NOT NULL)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
