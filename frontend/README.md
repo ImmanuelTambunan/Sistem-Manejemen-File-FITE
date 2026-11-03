@@ -1,75 +1,54 @@
-# React + TypeScript + Vite
+# SIFITE Frontend - Sistem Informasi Arsip Berkas Digital FITE
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend aplikasi web Sistem Informasi Pengelolaan dan Pengarsipan Berkas Digital Fakultas Informatika dan Teknik Elektro (FITE) Institut Teknologi Del, dibangun menggunakan **Next.js 14 (App Router)**, **TypeScript**, dan **Tailwind CSS**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Fitur Utama
 
-## React Compiler
+- **In-Memory JWT Token Management (NFR-SEC-04):** Access token disimpan murni di memori (React Context) untuk mencegah serangan XSS. Refresh token dikelola otomatis melalui cookie `HttpOnly; SameSite=Strict`.
+- **Automatic Token Refresh Interceptor:** Pembaruan token otomatis saat respons HTTP 401 dan pengulangan request asli secara transparan tanpa logout prematur.
+- **Role-Based Access Control (RBAC):** Pelindung rute dan navigasi adaptif untuk 6 peran pengguna:
+  - Super Admin
+  - Dekan
+  - BAAK
+  - Koordinator Program Studi (Kaprodi)
+  - Dosen
+  - Mahasiswa
+- **Modul Antarmuka (Mockup S-01 s/d S-14):**
+  - **S-01 Login & S-02 Ganti Sandi:** Otentikasi dan penegakan penggantian sandi wajib.
+  - **S-03 Dashboard Adaptif:** Statistik metrik arsip, tren berkas per kategori, dan distribusi per program studi.
+  - **S-04 File Explorer & S-06 Upload:** Penelusuran arsip dengan filter multi-kriteria dan modal unggah drag-and-drop.
+  - **S-05 Detail Berkas:** Metadata lengkap, streaming unduhan langsung dari GCS, riwayat verifikasi, dan kontrol hapus berkas.
+  - **S-07 Explorer Publik:** Pencarian dan pengunduhan berkas publik civitas akademika berstatus disetujui.
+  - **S-08 Verifikasi Berkas:** Antrean verifikasi berkas publik khusus BAAK dan Super Admin.
+  - **S-09 Notifikasi:** Notifikasi real-time, badge jumlah pesan belum dibaca, dan dropdown cepat.
+  - **S-10 s/d S-12 Panel Admin:** Manajemen data pengguna, kategori berkas, program studi, dan log aktivitas penyimpanan.
+  - **S-13 Profil Pengguna:** Pembaruan informasi personal dan pergantian kata sandi berkala.
+  - **S-14 Status Pages:** Halaman error dan 404 terstandarisasi.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Prasyarat & Menjalankan Aplikasi
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```bash
+# Instal dependensi
+npm install
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Menjalankan server pengembangan
+npm run dev
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Membangun versi produksi
+npm run build
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+# Menjalankan versi produksi
+npm run start
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+## Konfigurasi Lingkungan
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Konfigurasi dibaca melalui file `.env.local` pada direktori root frontend:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8080
 ```

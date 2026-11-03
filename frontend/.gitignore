@@ -1,3 +1,9 @@
+# Next.js
+.next/
+out/
+build/
+*.tsbuildinfo
+
 # Logs
 logs
 *.log
