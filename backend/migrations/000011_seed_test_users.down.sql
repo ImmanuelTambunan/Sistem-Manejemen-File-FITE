@@ -7,3 +7,4 @@ DELETE FROM users WHERE email IN (
   'budi@del.ac.id',
   'iss24034@del.ac.id'
 );
+

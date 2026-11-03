@@ -7,3 +7,4 @@ INSERT INTO users (name, email, password, role_id, prodi_id, nim, nip, is_active
 ('Budi Mahasiswa', 'budi@del.ac.id', '$2a$12$SULIb9cQnCV2ytSEIbXvCeHQnwr5LwWnTS32TmSkUPUtcMvgORbMK', (SELECT id FROM roles WHERE `key` = 'mahasiswa'), (SELECT id FROM prodi WHERE code = 'IF'), '11S20001', NULL, 1, 0),
 ('Mahasiswa Sistem Informasi', 'iss24034@del.ac.id', '$2a$12$SULIb9cQnCV2ytSEIbXvCeHQnwr5LwWnTS32TmSkUPUtcMvgORbMK', (SELECT id FROM roles WHERE `key` = 'mahasiswa'), (SELECT id FROM prodi WHERE code = 'SI'), 'iss24034', NULL, 1, 0)
 ON DUPLICATE KEY UPDATE name=VALUES(name), password=VALUES(password), role_id=VALUES(role_id), prodi_id=VALUES(prodi_id);
+

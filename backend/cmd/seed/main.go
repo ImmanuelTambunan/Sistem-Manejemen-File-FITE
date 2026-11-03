@@ -151,3 +151,4 @@ func main() {
 	fmt.Printf("Bcrypt Hash (%s): %s\n", passwordPlain, hashStr)
 	os.Exit(0)
 }
+
