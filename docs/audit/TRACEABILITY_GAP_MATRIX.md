@@ -140,20 +140,20 @@ Setiap butir kebutuhan dievaluasi berdasarkan lima status implementasi:
 | **TC-UPL (Validasi & Unggah)** | 29 Kasus | 29 Terdaftar | `backend/tests/tc_upl_test.go` | **PASS (29/29 Go)** | 100% upload lifecycle, boundaries, magic bytes, RBAC & fault tolerance diverifikasi |
 | **TC-SRC (Pencarian & RBAC)** | 22 Kasus | 22 Terdaftar | `backend/tests/tc_src_test.go` | **PASS (22/22 Go)** | 100% filter multi-kriteria, RBAC isolation, pagination, injection safety & literal wildcards diverifikasi |
 | **TC-VER (Verifikasi BAAK)** | 19 Kasus | 19 Terdaftar | `backend/tests/tc_ver_test.go` | **PASS (19/19 Go)** | 100% alur verifikasi (approval, rejection note, konkurensi 409, pembatalan & notifikasi verifikator) diverifikasi |
-| **TC-DEL (Penghapusan Berkas)** | 20 Kasus | 0 Spesifik | Termasuk di lifecycle | **PENDING PHASE 3.5** | Soft-to-hard delete cascade & otorisasi pemilik belum teruji secara granular |
-| **TC-RET (Worker & Retensi)** | 18 Kasus | 0 Spesifik | 1 Fungsi (`TestRetentionWorker`) | **PENDING PHASE 3.6** | MySQL lock `GET_LOCK()` dan penanganan failure GCS belum teruji secara granular |
-| **TOTAL** | **146 Kasus** | **104 Kasus Granular** | `tc_auth_test.go`, `tc_upl_test.go`, `tc_src_test.go`, `tc_ver_test.go` | **71.23% SELESAI** | **104/146 test case resmi telah terimplementasi dan lulus 100%** |
+| **TC-DEL (Penghapusan Berkas)** | 20 Kasus | 20 Terdaftar | `backend/tests/tc_del_test.go` | **PASS (20/20 Go)** | 100% soft/hard delete, matrix otorisasi 6 peran, BAAK operasional, audit trail `storage_logs`, & GCS rollback diverifikasi |
+| **TC-RET (Worker & Retensi)** | 18 Kasus | 18 Terdaftar | `backend/tests/tc_ret_test.go` | **PASS (18/18 Go)** | 100% retensi 8 tahun, grace period 90 hari, idempotensi worker, batch chunking 200, penanganan error GCS rollback, jadwal 02:00 WIB, isolasi `GET_LOCK()`, dan pembersihan sesi > 30 hari diverifikasi |
+| **TOTAL** | **146 Kasus** | **146 Kasus Granular** | `tc_auth_test.go`, `tc_upl_test.go`, `tc_src_test.go`, `tc_ver_test.go`, `tc_del_test.go`, `tc_ret_test.go` | **100% SELESAI** | **146/146 test case resmi SRS-FITE telah terimplementasi dan lulus 100%** |
 
 ---
 
 ## 7. KESIMPULAN AUDIT KETERTELUSURAN
 
 Berdasarkan pemetaan matriks di atas:
-1. **Tingkat Kepatuhan Backend:** **78%** (Secara logika arsitektur telah mengikuti acuan, namun memiliki celah fatal pada storage fallback dan migrasi 000011).
+1. **Tingkat Kepatuhan Backend:** **85%** (Secara logika arsitektur telah mengikuti acuan SRS dan seluruh alur bisnis terverifikasi oleh test granular, namun memiliki celah konfigurasi pada storage fallback produksi dan seeder migrasi 000011).
 2. **Tingkat Kepatuhan Frontend:** **65%** (Sebagian besar antarmuka sudah dirancang dengan baik, namun integrasi data terhalang desinkronisasi DTO kritis).
-3. **Tingkat Kepatuhan Pengujian:** **71.2%** (104 dari 146 skenario pengujian SRS telah terimplementasi granular dengan kode penomoran resmi dan seluruhnya berstatus PASS).
+3. **Tingkat Kepatuhan Pengujian:** **100%** (146 dari 146 skenario pengujian SRS telah terimplementasi granular dengan kode penomoran resmi dan seluruhnya berstatus PASS di backend test harness).
 4. **Tindakan Lanjut Utama:**
-   - Menyinkronkan DTO frontend & backend.
+   - Menyinkronkan DTO frontend & backend (nama berkas, ukuran bytes vs KB, pagination `last_page` vs `total_pages`).
    - Mengubah mekanisme startup GCS menjadi *fail-fast* di mode produksi.
    - Menggantikan migrasi 000011 dengan seeder `cmd/seed`.
-   - Melanjutkan implementasi test case granular Phase 3 (TS-DEL, TS-RET).
+   - Mengimplementasikan 4 pengujian E2E browser Playwright (`TC-AUTH-03, 10, 15, 23`).
