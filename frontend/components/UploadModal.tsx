@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, UploadCloud, AlertCircle, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
+import { X, UploadCloud, AlertCircle, FileText, CheckCircle2, AlertTriangle, UserCheck } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -44,6 +44,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [visibility, setVisibility] = useState<"private" | "public">("private");
   const [description, setDescription] = useState("");
   const [archivedAt, setArchivedAt] = useState("");
+  const [subjectUserId, setSubjectUserId] = useState("");
+
+  const isPrivileged = user?.role === "super_admin" || user?.role === "baak";
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       setVisibility("private");
       setDescription("");
       setArchivedAt("");
+      setSubjectUserId("");
+      setProdiId(user?.prodi?.id || "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user]);
@@ -190,8 +195,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       if (prodiId) {
         formData.append("prodi_id", String(prodiId));
       }
-      if (archivedAt) {
-        formData.append("archived_at", archivedAt);
+      if (isPrivileged) {
+        if (subjectUserId.trim()) {
+          formData.append("subject_user_id", subjectUserId.trim());
+        }
+        if (archivedAt) {
+          formData.append("archived_at", archivedAt);
+        }
       }
 
       await api.postForm("/api/v1/documents", formData);
@@ -338,6 +348,102 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               </select>
             </div>
           </div>
+
+          {/* Program Studi Selector for Privileged / Users without fixed prodi */}
+          {(!user?.prodi?.id || isPrivileged) && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Program Studi {isPrivileged && !subjectUserId && <span className="text-red-500">*</span>}
+              </label>
+              <select
+                value={prodiId}
+                onChange={(e) => setProdiId(e.target.value ? Number(e.target.value) : "")}
+                disabled={loadingMeta}
+                className={`w-full px-3.5 py-2.5 rounded-lg border text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 ${
+                  fieldErrors.prodi_id
+                    ? "border-red-300 focus:ring-red-200"
+                    : "border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
+                }`}
+              >
+                <option value="">
+                  {subjectUserId ? "-- Otomatis mengikuti prodi pemilik subjek (opsional) --" : "-- Pilih Program Studi --"}
+                </option>
+                {prodis.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.code.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+              {fieldErrors.prodi_id && (
+                <p className="text-xs text-red-500 mt-1">{fieldErrors.prodi_id}</p>
+              )}
+            </div>
+          )}
+
+          {/* Privileged Archival Configuration (BAAK & Super Admin - UC-23) */}
+          {isPrivileged && (
+            <div className="p-4 rounded-xl bg-indigo-50/40 border border-indigo-100 space-y-3">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                  Pengaturan Khusus BAAK & Admin (Arsip Atas Nama & Retroaktif)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Subject User ID */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    ID Pengguna Sivitas (Subjek Pemilik)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={subjectUserId}
+                    onChange={(e) => setSubjectUserId(e.target.value)}
+                    placeholder="Contoh: 8 (Kosongkan jika atas nama sendiri)"
+                    className={`w-full px-3.5 py-2 rounded-lg border text-sm text-slate-800 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 ${
+                      fieldErrors.subject_user_id
+                        ? "border-red-300 focus:ring-red-200"
+                        : "border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
+                    }`}
+                  />
+                  {fieldErrors.subject_user_id ? (
+                    <p className="text-xs text-red-500 mt-1">{fieldErrors.subject_user_id}</p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      ID mahasiswa/dosen sasaran untuk pengarsipan oleh BAAK.
+                    </p>
+                  )}
+                </div>
+
+                {/* Tanggal Arsip Retroaktif */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Tanggal Arsip Retroaktif (Lampau)
+                  </label>
+                  <input
+                    type="date"
+                    value={archivedAt}
+                    max={new Date().toISOString().split("T")[0]}
+                    onChange={(e) => setArchivedAt(e.target.value)}
+                    className={`w-full px-3.5 py-2 rounded-lg border text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 ${
+                      fieldErrors.archived_at
+                        ? "border-red-300 focus:ring-red-200"
+                        : "border-slate-300 focus:ring-indigo-200 focus:border-indigo-500"
+                    }`}
+                  />
+                  {fieldErrors.archived_at ? (
+                    <p className="text-xs text-red-500 mt-1">{fieldErrors.archived_at}</p>
+                  ) : (
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Kosongkan jika diarsipkan per tanggal hari ini.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Visibility Option */}
           <div>

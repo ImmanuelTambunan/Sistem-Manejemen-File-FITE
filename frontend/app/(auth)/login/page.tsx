@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Lock, Mail, Eye, EyeOff, AlertCircle, Clock, ShieldCheck, Loader2 } from "lucide-react";
@@ -199,8 +200,11 @@ function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-100 text-center text-xs text-slate-400">
-          Sistem Repositori Arsip Terpusat & Terenkripsi
+        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
+          <span>Sistem Repositori Arsip FITE</span>
+          <Link href="/status" className="text-slate-500 hover:text-blue-600 transition-colors font-medium">
+            Status Layanan
+          </Link>
         </div>
       </div>
     </div>
