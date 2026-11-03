@@ -66,6 +66,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       setDescription("");
       setArchivedAt("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user]);
 
   const loadMetadata = async () => {
