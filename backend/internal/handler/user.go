@@ -64,6 +64,7 @@ type userFilter struct {
 	IsActive *bool  `form:"is_active"`
 	Page     *int   `form:"page" binding:"omitempty,min=1"`
 	PerPage  *int   `form:"per_page" binding:"omitempty,min=1,max=100"`
+	Limit    *int   `form:"limit" binding:"omitempty,min=1,max=100"`
 }
 
 type prodiUpdateRequest struct {
@@ -138,6 +139,8 @@ func (h *UserHandler) Index(c *gin.Context) error {
 	perPage := 15
 	if f.PerPage != nil {
 		perPage = *f.PerPage
+	} else if f.Limit != nil {
+		perPage = *f.Limit
 	}
 
 	q := h.db.WithContext(c.Request.Context()).Model(&domain.User{}).

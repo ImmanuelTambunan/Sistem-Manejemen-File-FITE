@@ -49,9 +49,11 @@ interface DocumentItem {
 
 interface Meta {
   page: number;
+  current_page?: number;
   per_page: number;
   total: number;
   total_pages: number;
+  last_page?: number;
 }
 
 export default function FileExplorerPage() {
@@ -100,7 +102,12 @@ export default function FileExplorerPage() {
       );
       setDocuments(res.data || []);
       if (res.meta) {
-        setMeta(res.meta);
+        setMeta({
+          page: res.meta.page ?? res.meta.current_page ?? 1,
+          per_page: res.meta.per_page ?? 15,
+          total: res.meta.total ?? 0,
+          total_pages: res.meta.total_pages ?? res.meta.last_page ?? 1,
+        });
       }
     } catch (err) {
       console.error("Gagal memuat dokumen:", err);

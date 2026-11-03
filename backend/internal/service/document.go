@@ -45,6 +45,7 @@ type DocumentFilter struct {
 	Sort         string `form:"sort" binding:"omitempty,oneof=created_at -created_at title -title size_kb -size_kb"`
 	Page         *int   `form:"page" binding:"omitempty,min=1"`
 	PerPage      *int   `form:"per_page" binding:"omitempty,min=1,max=100"`
+	Limit        *int   `form:"limit" binding:"omitempty,min=1,max=100"`
 }
 
 func (f DocumentFilter) PageNum() int {
@@ -57,6 +58,9 @@ func (f DocumentFilter) PageNum() int {
 func (f DocumentFilter) PerPageNum() int {
 	if f.PerPage != nil {
 		return *f.PerPage
+	}
+	if f.Limit != nil {
+		return *f.Limit
 	}
 	return 15
 }

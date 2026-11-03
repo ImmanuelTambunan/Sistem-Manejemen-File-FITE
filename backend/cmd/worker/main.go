@@ -43,12 +43,21 @@ func main() {
 	if cfg.GCSBucket != "" {
 		gcsStore, err := storage.NewGCS(ctx, cfg.GCSBucket, cfg.GCSCredentials)
 		if err != nil {
-			slog.Warn("gagal inisialisasi GCS, beralih ke memory storage", "error", err)
+			if cfg.IsProd() {
+				slog.Error("fatal: inisialisasi Google Cloud Storage gagal di lingkungan production", "error", err)
+				os.Exit(1)
+			}
+			slog.Warn("gagal inisialisasi GCS, beralih ke memory storage untuk pengembangan lokal", "error", err)
 			store = storage.NewMemoryStorage()
 		} else {
 			store = gcsStore
 		}
 	} else {
+		if cfg.IsProd() {
+			slog.Error("fatal: GCS_BUCKET wajib dikonfigurasi dan tidak boleh kosong di lingkungan production")
+			os.Exit(1)
+		}
+		slog.Info("GCS_BUCKET belum diisi, menggunakan memory storage untuk pengembangan lokal")
 		store = storage.NewMemoryStorage()
 	}
 

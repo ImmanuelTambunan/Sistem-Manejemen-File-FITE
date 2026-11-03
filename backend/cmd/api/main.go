@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -58,13 +59,19 @@ func run() error {
 	if cfg.GCSBucket != "" {
 		gcsStore, err := storage.NewGCS(ctx, cfg.GCSBucket, cfg.GCSCredentials)
 		if err != nil {
-			slog.Warn("gagal inisialisasi GCS, beralih ke memory storage", "error", err)
+			if cfg.IsProd() {
+				return fmt.Errorf("fatal: inisialisasi Google Cloud Storage gagal di lingkungan production: %w", err)
+			}
+			slog.Warn("gagal inisialisasi GCS, beralih ke memory storage untuk pengembangan lokal", "error", err)
 			store = storage.NewMemoryStorage()
 		} else {
 			store = gcsStore
 		}
 	} else {
-		slog.Info("GCS_BUCKET belum diisi, menggunakan memory storage")
+		if cfg.IsProd() {
+			return errors.New("fatal: GCS_BUCKET wajib dikonfigurasi dan tidak boleh kosong di lingkungan production")
+		}
+		slog.Info("GCS_BUCKET belum diisi, menggunakan memory storage untuk pengembangan lokal")
 		store = storage.NewMemoryStorage()
 	}
 

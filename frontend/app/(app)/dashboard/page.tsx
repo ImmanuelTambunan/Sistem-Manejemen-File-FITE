@@ -29,8 +29,10 @@ interface SummaryData {
 interface RecentDocument {
   id: number;
   title: string;
-  file_name: string;
-  file_size_bytes: number;
+  file_name?: string;
+  original_name?: string;
+  file_size_bytes?: number;
+  size_kb?: number;
   mime_type: string;
   visibility: string;
   verification_status: string;
@@ -51,7 +53,7 @@ export default function DashboardPage() {
       setLoading(true);
       const [sumRes, docsRes] = await Promise.all([
         api.get<SummaryData>("/api/v1/dashboard/summary"),
-        api.get<RecentDocument[]>("/api/v1/documents?limit=6&page=1"),
+        api.get<RecentDocument[]>("/api/v1/documents?per_page=6&page=1"),
       ]);
 
       setSummary(sumRes.data);
@@ -515,7 +517,7 @@ export default function DashboardPage() {
                           >
                             {doc.title}
                           </Link>
-                          <span className="text-xs text-slate-400 font-mono">{doc.file_name}</span>
+                          <span className="text-xs text-slate-400 font-mono">{doc.file_name || doc.original_name}</span>
                         </div>
                       </div>
                     </td>
@@ -525,7 +527,7 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                      {formatSize(doc.file_size_bytes)}
+                      {formatSize(doc.file_size_bytes || (doc.size_kb ? doc.size_kb * 1024 : 0))}
                     </td>
                     <td className="px-6 py-4">
                       <span

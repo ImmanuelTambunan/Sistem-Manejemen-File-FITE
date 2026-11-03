@@ -23,13 +23,13 @@ func TestStrongPassword(t *testing.T) {
 		pw   string
 		want bool
 	}{
-		{"Short1!", false},               // < 8 chars
-		{"alllowercase1", false},          // no uppercase
-		{"ALLUPPERCASE1", false},          // no lowercase
-		{"NoDigitsHere!", false},          // no digits
-		{"ValidPass123", true},            // valid
-		{"Another#Strong99", true},        // valid
-		{"P@ssw0rd2026", true},            // valid
+		{"Short1!", false},        // < 8 chars
+		{"alllowercase1", false},  // no uppercase
+		{"ALLUPPERCASE1", false},  // no lowercase
+		{"NoDigitsHere!", false},  // no digits
+		{"ValidPass123", true},    // valid
+		{"Another#Strong99", true}, // valid
+		{"P@ssw0rd2026", true},    // valid
 	}
 
 	for _, tt := range tests {
@@ -105,7 +105,7 @@ func TestResponseEnvelopes(t *testing.T) {
 		}
 	})
 
-	t.Run("Paged Envelope", func(t *testing.T) {
+	t.Run("Paged Envelope with Dual Compatibility", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		c, _ := gin.CreateTestContext(w)
 
@@ -113,10 +113,51 @@ func TestResponseEnvelopes(t *testing.T) {
 		if meta.LastPage != 3 {
 			t.Errorf("expected LastPage=3, got %d", meta.LastPage)
 		}
+		if meta.TotalPages != 3 {
+			t.Errorf("expected TotalPages=3, got %d", meta.TotalPages)
+		}
+		if meta.CurrentPage != 1 {
+			t.Errorf("expected CurrentPage=1, got %d", meta.CurrentPage)
+		}
+		if meta.Page != 1 {
+			t.Errorf("expected Page=1, got %d", meta.Page)
+		}
+		if meta.PerPage != 15 {
+			t.Errorf("expected PerPage=15, got %d", meta.PerPage)
+		}
+		if meta.Limit != 15 {
+			t.Errorf("expected Limit=15, got %d", meta.Limit)
+		}
 
 		httpx.Paged(c, "OK", []string{"doc1", "doc2"}, meta)
 		if w.Code != http.StatusOK {
 			t.Errorf("status = %d, want 200", w.Code)
+		}
+
+		var resp struct {
+			Success bool `json:"success"`
+			Meta    struct {
+				CurrentPage int   `json:"current_page"`
+				Page        int   `json:"page"`
+				PerPage     int   `json:"per_page"`
+				Limit       int   `json:"limit"`
+				Total       int64 `json:"total"`
+				LastPage    int   `json:"last_page"`
+				TotalPages  int   `json:"total_pages"`
+			} `json:"meta"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("json parse error: %v", err)
+		}
+
+		if resp.Meta.CurrentPage != 1 || resp.Meta.Page != 1 {
+			t.Errorf("unexpected page values: current_page=%d, page=%d", resp.Meta.CurrentPage, resp.Meta.Page)
+		}
+		if resp.Meta.LastPage != 3 || resp.Meta.TotalPages != 3 {
+			t.Errorf("unexpected last page values: last_page=%d, total_pages=%d", resp.Meta.LastPage, resp.Meta.TotalPages)
+		}
+		if resp.Meta.PerPage != 15 || resp.Meta.Limit != 15 {
+			t.Errorf("unexpected per_page values: per_page=%d, limit=%d", resp.Meta.PerPage, resp.Meta.Limit)
 		}
 	})
 }

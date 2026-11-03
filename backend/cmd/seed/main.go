@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -15,6 +16,9 @@ import (
 )
 
 func main() {
+	mustChangePwFlag := flag.Bool("must-change-pw", false, "set must_change_password=true for initial testing of S-02")
+	flag.Parse()
+
 	_ = godotenv.Load()
 
 	cfg, err := config.Load()
@@ -62,6 +66,8 @@ func main() {
 	strPtr := func(s string) *string { return &s }
 	uintPtr := func(u uint) *uint { return &u }
 
+	// 10 Akun Uji Coba Resmi SRS FITE (Bab 3.0 & 2.4):
+	// SA, DKN, BAK, KPR-IF, KPR-SI, DSN-IF, DSN-SI, MHS-IF-1, MHS-IF-2, MHS-SI-1
 	users := []domain.User{
 		{
 			Name:               "Super Admin",
@@ -69,7 +75,7 @@ func main() {
 			PasswordHash:       hashStr,
 			RoleID:             roleMap[domain.RoleSuperAdmin],
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
 			Name:               "Dekan FITE",
@@ -77,7 +83,7 @@ func main() {
 			PasswordHash:       hashStr,
 			RoleID:             roleMap[domain.RoleDekan],
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
 			Name:               "Staf BAAK",
@@ -85,7 +91,7 @@ func main() {
 			PasswordHash:       hashStr,
 			RoleID:             roleMap[domain.RoleBaak],
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
 			Name:               "Kaprodi Informatika",
@@ -95,7 +101,17 @@ func main() {
 			ProdiID:            uintPtr(prodiIF),
 			NIP:                strPtr("198001012005011001"),
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
+		},
+		{
+			Name:               "Kaprodi Sistem Informasi",
+			Email:              "kaprodi.si@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleKaprodi],
+			ProdiID:            uintPtr(prodiSI),
+			NIP:                strPtr("198202022008011003"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
 			Name:               "Dosen Informatika",
@@ -105,32 +121,52 @@ func main() {
 			ProdiID:            uintPtr(prodiIF),
 			NIP:                strPtr("198505052010011002"),
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
-			Name:               "Budi Mahasiswa (IF)",
+			Name:               "Dosen Sistem Informasi",
+			Email:              "dosen.si@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleDosen],
+			ProdiID:            uintPtr(prodiSI),
+			NIP:                strPtr("198707072012011004"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
+		},
+		{
+			Name:               "Budi Mahasiswa (IF-1)",
 			Email:              "budi@del.ac.id",
 			PasswordHash:       hashStr,
 			RoleID:             roleMap[domain.RoleMahasiswa],
 			ProdiID:            uintPtr(prodiIF),
 			NIM:                strPtr("11S20001"),
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 		{
-			Name:               "Mahasiswa Sistem Informasi",
+			Name:               "Mahasiswa Informatika (IF-2)",
+			Email:              "mhs.if2@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleMahasiswa],
+			ProdiID:            uintPtr(prodiIF),
+			NIM:                strPtr("11S20002"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
+		},
+		{
+			Name:               "Mahasiswa Sistem Informasi (SI-1)",
 			Email:              "iss24034@del.ac.id",
 			PasswordHash:       hashStr,
 			RoleID:             roleMap[domain.RoleMahasiswa],
 			ProdiID:            uintPtr(prodiSI),
 			NIM:                strPtr("iss24034"),
 			IsActive:           true,
-			MustChangePassword: false,
+			MustChangePassword: *mustChangePwFlag,
 		},
 	}
 
 	fmt.Println("=================================================================")
-	fmt.Println("             SIFITE TEST ACCOUNTS SEEDER                         ")
+	fmt.Println("             SIFITE TEST ACCOUNTS SEEDER (10 AKUN SRS)           ")
 	fmt.Println("=================================================================")
 
 	for _, u := range users {
@@ -147,8 +183,7 @@ func main() {
 	}
 
 	fmt.Println("=================================================================")
-	fmt.Println("Semua akun testing siap digunakan untuk login!")
-	fmt.Printf("Bcrypt Hash (%s): %s\n", passwordPlain, hashStr)
+	fmt.Println("Semua 10 akun pengujian SRS siap digunakan untuk login!")
+	fmt.Printf("Bcrypt Work Factor 12 Hash: %s\n", hashStr)
 	os.Exit(0)
 }
-

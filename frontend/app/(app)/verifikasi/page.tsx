@@ -67,7 +67,12 @@ export default function VerificationPage() {
         `/api/v1/verifications?${params.toString()}`
       );
       setItems(res.data || []);
-      if (res.meta) setMeta(res.meta);
+      if (res.meta) setMeta({
+        page: res.meta.page ?? res.meta.current_page ?? 1,
+        per_page: res.meta.per_page ?? 15,
+        total: res.meta.total ?? 0,
+        total_pages: res.meta.total_pages ?? res.meta.last_page ?? 1,
+      });
     } catch (err) {
       console.error("Gagal memuat verifikasi:", err);
     } finally {

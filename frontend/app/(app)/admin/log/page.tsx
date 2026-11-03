@@ -71,7 +71,12 @@ export default function StorageAuditLogPage() {
 
       setMetrics(storageRes.data);
       setLogs(logsRes.data || []);
-      if (logsRes.meta) setMeta(logsRes.meta);
+      if (logsRes.meta) setMeta({
+        page: logsRes.meta.page ?? logsRes.meta.current_page ?? 1,
+        per_page: logsRes.meta.per_page ?? 15,
+        total: logsRes.meta.total ?? 0,
+        total_pages: logsRes.meta.total_pages ?? logsRes.meta.last_page ?? 1,
+      });
     } catch (err) {
       console.error("Gagal memuat log penyimpanan:", err);
     } finally {

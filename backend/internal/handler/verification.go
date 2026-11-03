@@ -24,6 +24,7 @@ type verificationQuery struct {
 	DocumentID *uint  `form:"document_id" binding:"omitempty,gt=0"`
 	Page       *int   `form:"page" binding:"omitempty,min=1"`
 	PerPage    *int   `form:"per_page" binding:"omitempty,min=1,max=100"`
+	Limit      *int   `form:"limit" binding:"omitempty,min=1,max=100"`
 }
 
 type decideRequest struct {
@@ -42,6 +43,8 @@ func (h *VerificationHandler) Index(c *gin.Context) error {
 	}
 	if q.PerPage != nil {
 		f.PerPage = *q.PerPage
+	} else if q.Limit != nil {
+		f.PerPage = *q.Limit
 	}
 	items, total, err := h.svc.List(c.Request.Context(), f)
 	if err != nil {

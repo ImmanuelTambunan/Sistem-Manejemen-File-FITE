@@ -25,9 +25,12 @@ const RequestIDKey = "request_id"
 
 type Meta struct {
 	CurrentPage int   `json:"current_page"`
+	Page        int   `json:"page"`
 	PerPage     int   `json:"per_page"`
+	Limit       int   `json:"limit"`
 	Total       int64 `json:"total"`
 	LastPage    int   `json:"last_page"`
+	TotalPages  int   `json:"total_pages"`
 }
 
 func PageMeta(page, per int, total int64) Meta {
@@ -35,7 +38,15 @@ func PageMeta(page, per int, total int64) Meta {
 	if last < 1 {
 		last = 1
 	}
-	return Meta{CurrentPage: page, PerPage: per, Total: total, LastPage: last}
+	return Meta{
+		CurrentPage: page,
+		Page:        page,
+		PerPage:     per,
+		Limit:       per,
+		Total:       total,
+		LastPage:    last,
+		TotalPages:  last,
+	}
 }
 
 func RequestID(c *gin.Context) string { return c.GetString(RequestIDKey) }

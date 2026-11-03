@@ -84,14 +84,16 @@ func toUserRef(u domain.User) UserRef {
 }
 
 type DocumentResponse struct {
-	ID           uint      `json:"id"`
-	Title        string    `json:"title"`
-	Description  *string   `json:"description"`
-	OriginalName string    `json:"original_name"`
-	Extension    string    `json:"extension"`
-	MimeType     string    `json:"mime_type"`
-	SizeKB       uint      `json:"size_kb"`
-	Category     struct {
+	ID                 uint      `json:"id"`
+	Title              string    `json:"title"`
+	Description        *string   `json:"description"`
+	OriginalName       string    `json:"original_name"`
+	FileName           string    `json:"file_name"`
+	Extension          string    `json:"extension"`
+	MimeType           string    `json:"mime_type"`
+	SizeKB             uint      `json:"size_kb"`
+	FileSizeBytes      int64     `json:"file_size_bytes"`
+	Category           struct {
 		ID   uint   `json:"id"`
 		Name string `json:"name"`
 	} `json:"category"`
@@ -114,9 +116,11 @@ func toDocumentResponse(d *domain.Document) DocumentResponse {
 		Title:              d.Title,
 		Description:        d.Description,
 		OriginalName:       d.OriginalName,
+		FileName:           d.OriginalName,
 		Extension:          d.Extension,
 		MimeType:           d.MimeType,
 		SizeKB:             d.SizeKB,
+		FileSizeBytes:      int64(d.SizeKB) * 1024,
 		Prodi:              toProdiRef(d.Prodi),
 		Uploader:           toUserRef(d.Uploader),
 		Owner:              toUserRef(d.Owner),
@@ -182,4 +186,3 @@ func toVerificationResponse(v *domain.Verification) VerificationResponse {
 	}
 	return r
 }
-
