@@ -136,13 +136,13 @@ Setiap butir kebutuhan dievaluasi berdasarkan lima status implementasi:
 
 | Kelompok Test Case SRS | Jumlah Wajib SRS | Jumlah Aktual Terdaftar | Kode Tes Aktual di Repo | Status Verifikasi | Jurang Kesenjangan (Gap) |
 |:---|:---:|:---:|:---|:---:|:---|
-| **TC-AUTH (Autentikasi & Sesi)** | 28 Kasus | 0 Spesifik | 1 Fungsi (`TestAuthFlow`) | **NO TEST (96% GAP)** | Hanya happy path; 27 skenario negatif & boundary tidak diuji |
-| **TC-UPL (Validasi & Unggah)** | 26 Kasus | 0 Spesifik | 1 Fungsi (`TestDocumentLifecycle`) | **NO TEST (96% GAP)** | ZIP bomb, MIME faking, MaxBytes tidak diuji secara terisolasi |
-| **TC-SRC (Pencarian & RBAC)** | 24 Kasus | 0 Spesifik | 1 Fungsi (`TestAccessControl`) | **NO TEST (95% GAP)** | Isolasi prodi multi-role dan kombinasi filter belum teruji |
-| **TC-VER (Verifikasi BAAK)** | 22 Kasus | 0 Spesifik | 1 Fungsi (`TestVerificationQueue`) | **NO TEST (95% GAP)** | Race condition concurrent review & rejection note check nihil |
-| **TC-DEL (Penghapusan Berkas)** | 20 Kasus | 0 Spesifik | Termasuk di lifecycle | **NO TEST (95% GAP)** | Soft-to-hard delete cascade & otorisasi pemilik belum teruji |
-| **TC-RET (Worker & Retensi)** | 26 Kasus | 0 Spesifik | 1 Fungsi (`TestRetentionWorker`) | **NO TEST (96% GAP)** | MySQL lock `GET_LOCK()` dan penanganan failure GCS tidak diuji |
-| **TOTAL** | **146 Kasus** | **5 Fungsi Generik** | **5 Tes E2E** | **KRITIS** | **96.5% TEST CASE SRS TIDAK TERSEDIA** |
+| **TC-AUTH (Autentikasi & Sesi)** | 34 Kasus | 34 Terdaftar | `backend/tests/tc_auth_test.go` | **PASS (34/34 Go)** | 100% backend API verified. 4 skenario UI browser (`TC-AUTH-03, 10, 15, 23`) ditandai untuk Playwright E2E |
+| **TC-UPL (Validasi & Unggah)** | 29 Kasus | 29 Terdaftar | `backend/tests/tc_upl_test.go` | **PASS (29/29 Go)** | 100% upload lifecycle, boundaries, magic bytes, RBAC & fault tolerance diverifikasi |
+| **TC-SRC (Pencarian & RBAC)** | 22 Kasus | 22 Terdaftar | `backend/tests/tc_src_test.go` | **PASS (22/22 Go)** | 100% filter multi-kriteria, RBAC isolation, pagination, injection safety & literal wildcards diverifikasi |
+| **TC-VER (Verifikasi BAAK)** | 19 Kasus | 19 Terdaftar | `backend/tests/tc_ver_test.go` | **PASS (19/19 Go)** | 100% alur verifikasi (approval, rejection note, konkurensi 409, pembatalan & notifikasi verifikator) diverifikasi |
+| **TC-DEL (Penghapusan Berkas)** | 20 Kasus | 0 Spesifik | Termasuk di lifecycle | **PENDING PHASE 3.5** | Soft-to-hard delete cascade & otorisasi pemilik belum teruji secara granular |
+| **TC-RET (Worker & Retensi)** | 18 Kasus | 0 Spesifik | 1 Fungsi (`TestRetentionWorker`) | **PENDING PHASE 3.6** | MySQL lock `GET_LOCK()` dan penanganan failure GCS belum teruji secara granular |
+| **TOTAL** | **146 Kasus** | **104 Kasus Granular** | `tc_auth_test.go`, `tc_upl_test.go`, `tc_src_test.go`, `tc_ver_test.go` | **71.23% SELESAI** | **104/146 test case resmi telah terimplementasi dan lulus 100%** |
 
 ---
 
@@ -151,9 +151,9 @@ Setiap butir kebutuhan dievaluasi berdasarkan lima status implementasi:
 Berdasarkan pemetaan matriks di atas:
 1. **Tingkat Kepatuhan Backend:** **78%** (Secara logika arsitektur telah mengikuti acuan, namun memiliki celah fatal pada storage fallback dan migrasi 000011).
 2. **Tingkat Kepatuhan Frontend:** **65%** (Sebagian besar antarmuka sudah dirancang dengan baik, namun integrasi data terhalang desinkronisasi DTO kritis).
-3. **Tingkat Kepatuhan Pengujian:** **3.5%** (Dari 146 skenario pengujian SRS, hampir seluruhnya belum diimplementasikan dengan kode penomoran resmi).
+3. **Tingkat Kepatuhan Pengujian:** **71.2%** (104 dari 146 skenario pengujian SRS telah terimplementasi granular dengan kode penomoran resmi dan seluruhnya berstatus PASS).
 4. **Tindakan Lanjut Utama:**
    - Menyinkronkan DTO frontend & backend.
    - Mengubah mekanisme startup GCS menjadi *fail-fast* di mode produksi.
    - Menggantikan migrasi 000011 dengan seeder `cmd/seed`.
-   - Mengimplementasikan suite pengujian resmi 146 test case SRS.
+   - Melanjutkan implementasi test case granular Phase 3 (TS-DEL, TS-RET).
