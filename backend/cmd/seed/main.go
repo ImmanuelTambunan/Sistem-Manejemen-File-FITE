@@ -163,6 +163,36 @@ func main() {
 			IsActive:           true,
 			MustChangePassword: *mustChangePwFlag,
 		},
+		{
+			Name:               "Kaprodi Teknik Elektro",
+			Email:              "kaprodi.te@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleKaprodi],
+			ProdiID:            uintPtr(prodiTE),
+			NIP:                strPtr("198303032009011005"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
+		},
+		{
+			Name:               "Dosen Teknik Elektro",
+			Email:              "dosen.te@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleDosen],
+			ProdiID:            uintPtr(prodiTE),
+			NIP:                strPtr("198909092014011006"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
+		},
+		{
+			Name:               "Mahasiswa Teknik Elektro (TE-1)",
+			Email:              "mhs.te@del.ac.id",
+			PasswordHash:       hashStr,
+			RoleID:             roleMap[domain.RoleMahasiswa],
+			ProdiID:            uintPtr(prodiTE),
+			NIM:                strPtr("14S20001"),
+			IsActive:           true,
+			MustChangePassword: *mustChangePwFlag,
+		},
 	}
 
 	fmt.Println("=================================================================")
