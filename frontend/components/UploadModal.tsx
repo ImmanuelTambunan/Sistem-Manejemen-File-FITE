@@ -1,22 +1,36 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, UploadCloud, AlertCircle, FileText, CheckCircle2, AlertTriangle, UserCheck } from "lucide-react";
+import {
+  X,
+  UploadCloud,
+  AlertCircle,
+  FileText,
+  CheckCircle2,
+  AlertTriangle,
+  UserCheck,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 interface Category {
   id: number;
-  name: string;
-  code: string;
-  allowed_roles: string[];
-  is_operational: boolean;
+  name?: string;
+  nama_kategori?: string;
+  nama?: string;
+  code?: string;
+  kode?: string;
+  allowed_roles?: string[];
+  is_operational?: boolean;
 }
 
 interface Prodi {
   id: number;
-  name: string;
-  code: string;
+  name?: string;
+  nama_prodi?: string;
+  nama?: string;
+  code?: string;
+  kode?: string;
 }
 
 interface UploadModalProps {
@@ -25,10 +39,23 @@ interface UploadModalProps {
   onSuccess: () => void;
 }
 
-const ALLOWED_EXTS = [".pdf", ".docx", ".xlsx", ".pptx", ".zip", ".png", ".jpg", ".jpeg"];
+const ALLOWED_EXTS = [
+  ".pdf",
+  ".docx",
+  ".xlsx",
+  ".pptx",
+  ".zip",
+  ".png",
+  ".jpg",
+  ".jpeg",
+];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalProps) {
+export default function UploadModal({
+  isOpen,
+  onClose,
+  onSuccess,
+}: UploadModalProps) {
   const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -174,11 +201,17 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       return;
     }
     if (!title.trim()) {
-      setFieldErrors((prev) => ({ ...prev, title: "Judul berkas wajib diisi." }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        title: "Judul berkas wajib diisi.",
+      }));
       return;
     }
     if (!categoryId) {
-      setFieldErrors((prev) => ({ ...prev, category_id: "Kategori berkas wajib dipilih." }));
+      setFieldErrors((prev) => ({
+        ...prev,
+        category_id: "Kategori berkas wajib dipilih.",
+      }));
       return;
     }
 
@@ -213,7 +246,10 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
       if (err.data?.errors) {
         setFieldErrors(err.data.errors);
       }
-      setError(err.message || "Gagal mengunggah berkas. Periksa kembali isian formulir.");
+      setError(
+        err.message ||
+          "Gagal mengunggah berkas. Periksa kembali isian formulir (pastikan kredensial Cloud Storage sudah dikonfigurasi di backend).",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -225,7 +261,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
           <div>
-            <h3 className="text-lg font-bold text-slate-800">Unggah Berkas Digital</h3>
+            <h3 className="text-lg font-bold text-slate-800">
+              Unggah Berkas Digital
+            </h3>
             <p className="text-xs text-slate-500 mt-0.5">
               Simpan dokumen ke sistem arsip digital Fakultas FITE
             </p>
@@ -262,8 +300,8 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 dragActive
                   ? "border-indigo-500 bg-indigo-50/50"
                   : file
-                  ? "border-emerald-400 bg-emerald-50/30"
-                  : "border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50"
+                    ? "border-emerald-400 bg-emerald-50/30"
+                    : "border-slate-300 hover:border-indigo-400 bg-slate-50/50 hover:bg-slate-50"
               }`}
             >
               <input
@@ -279,9 +317,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     <FileText className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <p className="text-sm font-semibold text-slate-800 line-clamp-1">{file.name}</p>
+                    <p className="text-sm font-semibold text-slate-800 line-clamp-1">
+                      {file.name}
+                    </p>
                     <p className="text-xs text-slate-500">
-                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Klik untuk ganti
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB • Klik untuk
+                      ganti
                     </p>
                   </div>
                   <CheckCircle2 className="w-5 h-5 text-emerald-500 ml-auto" />
@@ -293,7 +334,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   </div>
                   <p className="text-sm font-medium text-slate-700">
                     Tarik dan lepaskan berkas di sini, atau{" "}
-                    <span className="text-indigo-600 font-semibold underline">pilih dari perangkat</span>
+                    <span className="text-indigo-600 font-semibold underline">
+                      pilih dari perangkat
+                    </span>
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
                     PDF, DOCX, XLSX, PPTX, ZIP, PNG, JPG (Maks. 10 MB)
@@ -340,11 +383,19 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 <option value="" disabled>
                   Pilih Kategori
                 </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name} ({cat.code})
-                  </option>
-                ))}
+                {categories.map((cat) => {
+                  const catName =
+                    cat.name ||
+                    cat.nama_kategori ||
+                    cat.nama ||
+                    `Kategori ${cat.id}`;
+                  const catCode = cat.code || cat.kode || "-";
+                  return (
+                    <option key={cat.id} value={cat.id}>
+                      {catName} ({catCode})
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -353,11 +404,16 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           {(!user?.prodi?.id || isPrivileged) && (
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-                Program Studi {isPrivileged && !subjectUserId && <span className="text-red-500">*</span>}
+                Program Studi{" "}
+                {isPrivileged && !subjectUserId && (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <select
                 value={prodiId}
-                onChange={(e) => setProdiId(e.target.value ? Number(e.target.value) : "")}
+                onChange={(e) =>
+                  setProdiId(e.target.value ? Number(e.target.value) : "")
+                }
                 disabled={loadingMeta}
                 className={`w-full px-3.5 py-2.5 rounded-lg border text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 ${
                   fieldErrors.prodi_id
@@ -366,16 +422,25 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                 }`}
               >
                 <option value="">
-                  {subjectUserId ? "-- Otomatis mengikuti prodi pemilik subjek (opsional) --" : "-- Pilih Program Studi --"}
+                  {subjectUserId
+                    ? "-- Otomatis mengikuti prodi pemilik subjek (opsional) --"
+                    : "-- Pilih Program Studi --"}
                 </option>
-                {prodis.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.code.toUpperCase()})
-                  </option>
-                ))}
+                {prodis.map((p) => {
+                  const pName =
+                    p.name || p.nama_prodi || p.nama || `Prodi ${p.id}`;
+                  const pCode = p.code || p.kode || "-";
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {pName} ({pCode.toUpperCase()})
+                    </option>
+                  );
+                })}
               </select>
               {fieldErrors.prodi_id && (
-                <p className="text-xs text-red-500 mt-1">{fieldErrors.prodi_id}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {fieldErrors.prodi_id}
+                </p>
               )}
             </div>
           )}
@@ -409,7 +474,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     }`}
                   />
                   {fieldErrors.subject_user_id ? (
-                    <p className="text-xs text-red-500 mt-1">{fieldErrors.subject_user_id}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {fieldErrors.subject_user_id}
+                    </p>
                   ) : (
                     <p className="text-[11px] text-slate-500 mt-1">
                       ID mahasiswa/dosen sasaran untuk pengarsipan oleh BAAK.
@@ -434,7 +501,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                     }`}
                   />
                   {fieldErrors.archived_at ? (
-                    <p className="text-xs text-red-500 mt-1">{fieldErrors.archived_at}</p>
+                    <p className="text-xs text-red-500 mt-1">
+                      {fieldErrors.archived_at}
+                    </p>
                   ) : (
                     <p className="text-[11px] text-slate-500 mt-1">
                       Kosongkan jika diarsipkan per tanggal hari ini.
@@ -467,9 +536,12 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
                 />
                 <div>
-                  <span className="block text-sm font-semibold text-slate-800">Internal / Terbatas</span>
+                  <span className="block text-sm font-semibold text-slate-800">
+                    Internal / Terbatas
+                  </span>
                   <span className="block text-xs text-slate-500 mt-0.5">
-                    Hanya dapat diakses oleh pihak berwenang sesuai hak akses peran.
+                    Hanya dapat diakses oleh pihak berwenang sesuai hak akses
+                    peran.
                   </span>
                 </div>
               </label>
@@ -490,7 +562,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   className="mt-0.5 text-indigo-600 focus:ring-indigo-500"
                 />
                 <div>
-                  <span className="block text-sm font-semibold text-slate-800">Publik (Explorer)</span>
+                  <span className="block text-sm font-semibold text-slate-800">
+                    Publik (Explorer)
+                  </span>
                   <span className="block text-xs text-slate-500 mt-0.5">
                     Dapat dilihat publik setelah diverifikasi BAAK/Admin.
                   </span>
@@ -502,9 +576,13 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
               <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2.5 text-amber-800 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong>Perhatian:</strong> Berkas bertanda <em>Publik</em> akan berstatus{" "}
-                  <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono">menunggu verifikasi</code>.
-                  Berkas tidak akan langsung muncul di katalog publik sebelum disetujui oleh BAAK atau Super Admin.
+                  <strong>Perhatian:</strong> Berkas bertanda <em>Publik</em>{" "}
+                  akan berstatus{" "}
+                  <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono">
+                    menunggu verifikasi
+                  </code>
+                  . Berkas tidak akan langsung muncul di katalog publik sebelum
+                  disetujui oleh BAAK atau Super Admin.
                 </span>
               </div>
             )}
