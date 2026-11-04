@@ -5,6 +5,10 @@
 *.pem
 *service-account*.json
 
+# Storage lokal
+uploads/
+backend/uploads/
+
 # Go
 backend/bin/
 backend/tmp/

@@ -17,6 +17,8 @@ type Config struct {
 	AllowedOrigin, CookieDomain string
 	CookieSecure                bool
 	TrustedProxies              []string
+	StorageDriver               string // "local", "gcs", "memory"
+	StorageLocalPath            string // path direktori penyimpanan lokal (default: "./uploads")
 	GCSBucket, GCSCredentials   string
 	RetentionYears, GraceDays   int
 	Timezone                    string
@@ -29,22 +31,33 @@ func (c Config) IsProd() bool { return c.Env == "production" }
 func Load() (Config, error) {
 	var err error
 	c := Config{
-		Env:            env("APP_ENV", "development"),
-		HTTPAddr:       env("HTTP_ADDR", ":8080"),
-		DBDSN:          os.Getenv("DB_DSN"),
-		JWTSecret:      []byte(os.Getenv("JWT_SECRET")),
-		JWTIssuer:      env("JWT_ISSUER", "fite-arsip-api"),
-		JWTAudience:    env("JWT_AUDIENCE", "fite-arsip-web"),
-		AllowedOrigin:  os.Getenv("ALLOWED_ORIGIN"),
-		CookieDomain:   os.Getenv("COOKIE_DOMAIN"),
-		CookieSecure:   env("COOKIE_SECURE", "false") == "true",
-		GCSBucket:      os.Getenv("GCS_BUCKET"),
-		GCSCredentials: os.Getenv("GCS_CREDENTIALS_FILE"),
-		Timezone:       env("TIMEZONE", "Asia/Jakarta"),
-		MaxFileBytes:   10 << 20,
-		MaxUploadBody:  11 << 20,
-		MaxJSONBody:    1 << 20,
+		Env:              env("APP_ENV", "development"),
+		HTTPAddr:         env("HTTP_ADDR", ":8080"),
+		DBDSN:            os.Getenv("DB_DSN"),
+		JWTSecret:        []byte(os.Getenv("JWT_SECRET")),
+		JWTIssuer:        env("JWT_ISSUER", "fite-arsip-api"),
+		JWTAudience:      env("JWT_AUDIENCE", "fite-arsip-web"),
+		AllowedOrigin:    os.Getenv("ALLOWED_ORIGIN"),
+		CookieDomain:     os.Getenv("COOKIE_DOMAIN"),
+		CookieSecure:     env("COOKIE_SECURE", "false") == "true",
+		StorageDriver:    strings.ToLower(strings.TrimSpace(os.Getenv("STORAGE_DRIVER"))),
+		StorageLocalPath: env("STORAGE_LOCAL_PATH", "./uploads"),
+		GCSBucket:        os.Getenv("GCS_BUCKET"),
+		GCSCredentials:   os.Getenv("GCS_CREDENTIALS_FILE"),
+		Timezone:         env("TIMEZONE", "Asia/Jakarta"),
+		MaxFileBytes:     10 << 20,
+		MaxUploadBody:    11 << 20,
+		MaxJSONBody:      1 << 20,
 	}
+
+	if c.StorageDriver == "" {
+		if c.GCSBucket != "" && c.GCSBucket != "nama-bucket-gcp-anda" {
+			c.StorageDriver = "gcs"
+		} else {
+			c.StorageDriver = "local"
+		}
+	}
+
 	for _, p := range strings.Split(os.Getenv("TRUSTED_PROXIES"), ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			c.TrustedProxies = append(c.TrustedProxies, p)
@@ -76,12 +89,15 @@ func Load() (Config, error) {
 	if c.AllowedOrigin == "" {
 		problems = append(problems, "ALLOWED_ORIGIN wajib")
 	}
+	if c.StorageDriver != "local" && c.StorageDriver != "gcs" && c.StorageDriver != "memory" {
+		problems = append(problems, "STORAGE_DRIVER harus berupa 'local', 'gcs', atau 'memory'")
+	}
 	if c.IsProd() {
 		if !c.CookieSecure {
 			problems = append(problems, "COOKIE_SECURE wajib true di production")
 		}
-		if c.GCSBucket == "" {
-			problems = append(problems, "GCS_BUCKET wajib di production")
+		if c.StorageDriver == "gcs" && (c.GCSBucket == "" || c.GCSBucket == "nama-bucket-gcp-anda") {
+			problems = append(problems, "GCS_BUCKET wajib di production saat STORAGE_DRIVER=gcs")
 		}
 	}
 	if len(problems) > 0 {

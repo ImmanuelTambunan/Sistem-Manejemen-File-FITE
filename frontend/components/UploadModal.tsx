@@ -14,22 +14,30 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 interface Category {
-  id: number;
+  id?: number;
+  ID?: number;
   name?: string;
+  Name?: string;
   nama_kategori?: string;
   nama?: string;
   code?: string;
+  Code?: string;
   kode?: string;
   allowed_roles?: string[];
+  AllowedRoles?: string[];
   is_operational?: boolean;
+  IsOperational?: boolean;
 }
 
 interface Prodi {
-  id: number;
+  id?: number;
+  ID?: number;
   name?: string;
+  Name?: string;
   nama_prodi?: string;
   nama?: string;
   code?: string;
+  Code?: string;
   kode?: string;
 }
 
@@ -112,15 +120,19 @@ export default function UploadModal({
       const allCats = catRes.data || [];
       // Filter category by allowed_roles
       const userRole = user?.role || "";
-      const filteredCats = allCats.filter((cat) => {
-        if (!cat.allowed_roles || cat.allowed_roles.length === 0) return true;
-        return cat.allowed_roles.includes(userRole);
+      const filteredCats = allCats.filter((cat: any) => {
+        const roles = cat.allowed_roles || cat.AllowedRoles;
+        if (!roles || roles.length === 0) return true;
+        return roles.includes(userRole);
       });
 
       setCategories(filteredCats);
       setProdis(prodiRes.data || []);
       if (filteredCats.length > 0 && !categoryId) {
-        setCategoryId(filteredCats[0].id);
+        const firstId = filteredCats[0].id ?? (filteredCats[0] as any).ID;
+        if (firstId) {
+          setCategoryId(firstId);
+        }
       }
     } catch (err: any) {
       console.error("Gagal memuat kategori:", err);
@@ -214,6 +226,14 @@ export default function UploadModal({
       }));
       return;
     }
+    if (isPrivileged && !subjectUserId && !prodiId) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        prodi_id: "Program studi wajib dipilih untuk arsip fakultas/admin.",
+      }));
+      setError("Silakan pilih Program Studi terlebih dahulu.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -246,9 +266,10 @@ export default function UploadModal({
       if (err.data?.errors) {
         setFieldErrors(err.data.errors);
       }
+      const backendMsg = err.data?.message || err.message;
       setError(
-        err.message ||
-          "Gagal mengunggah berkas. Periksa kembali isian formulir (pastikan kredensial Cloud Storage sudah dikonfigurasi di backend).",
+        backendMsg ||
+          "Gagal mengunggah berkas. Periksa kembali isian formulir.",
       );
     } finally {
       setSubmitting(false);
@@ -383,16 +404,18 @@ export default function UploadModal({
                 <option value="" disabled>
                   Pilih Kategori
                 </option>
-                {categories.map((cat) => {
+                {categories.map((cat: any) => {
+                  const catId = cat.id ?? cat.ID;
                   const catName =
                     cat.name ||
+                    cat.Name ||
                     cat.nama_kategori ||
                     cat.nama ||
-                    `Kategori ${cat.id}`;
-                  const catCode = cat.code || cat.kode || "-";
+                    `Kategori ${catId}`;
+                  const catCode = cat.code || cat.Code || cat.kode;
                   return (
-                    <option key={cat.id} value={cat.id}>
-                      {catName} ({catCode})
+                    <option key={catId} value={catId}>
+                      {catName}{catCode ? ` (${catCode})` : ""}
                     </option>
                   );
                 })}
@@ -426,13 +449,14 @@ export default function UploadModal({
                     ? "-- Otomatis mengikuti prodi pemilik subjek (opsional) --"
                     : "-- Pilih Program Studi --"}
                 </option>
-                {prodis.map((p) => {
+                {prodis.map((p: any) => {
+                  const pId = p.id ?? p.ID;
                   const pName =
-                    p.name || p.nama_prodi || p.nama || `Prodi ${p.id}`;
-                  const pCode = p.code || p.kode || "-";
+                    p.name || p.Name || p.nama_prodi || p.nama || `Prodi ${pId}`;
+                  const pCode = (p.code || p.Code || p.kode || "").toUpperCase();
                   return (
-                    <option key={p.id} value={p.id}>
-                      {pName} ({pCode.toUpperCase()})
+                    <option key={pId} value={pId}>
+                      {pName}{pCode ? ` (${pCode})` : ""}
                     </option>
                   );
                 })}

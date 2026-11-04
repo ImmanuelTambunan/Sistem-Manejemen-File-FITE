@@ -40,25 +40,37 @@ func main() {
 	}
 
 	var store storage.Storage
-	if cfg.GCSBucket != "" {
+	switch cfg.StorageDriver {
+	case "gcs":
 		gcsStore, err := storage.NewGCS(ctx, cfg.GCSBucket, cfg.GCSCredentials)
 		if err != nil {
 			if cfg.IsProd() {
 				slog.Error("fatal: inisialisasi Google Cloud Storage gagal di lingkungan production", "error", err)
 				os.Exit(1)
 			}
-			slog.Warn("gagal inisialisasi GCS, beralih ke memory storage untuk pengembangan lokal", "error", err)
-			store = storage.NewMemoryStorage()
+			slog.Warn("gagal inisialisasi GCS, beralih ke local storage untuk pengembangan lokal", "error", err)
+			localStore, lErr := storage.NewLocalStorage(cfg.StorageLocalPath)
+			if lErr != nil {
+				slog.Error("fatal: inisialisasi fallback local storage gagal", "error", lErr)
+				os.Exit(1)
+			}
+			store = localStore
 		} else {
 			store = gcsStore
 		}
-	} else {
-		if cfg.IsProd() {
-			slog.Error("fatal: GCS_BUCKET wajib dikonfigurasi dan tidak boleh kosong di lingkungan production")
+	case "memory":
+		slog.Info("menggunakan in-memory storage")
+		store = storage.NewMemoryStorage()
+	case "local":
+		fallthrough
+	default:
+		slog.Info("menggunakan local disk storage", "path", cfg.StorageLocalPath)
+		localStore, err := storage.NewLocalStorage(cfg.StorageLocalPath)
+		if err != nil {
+			slog.Error("fatal: inisialisasi local storage gagal", "error", err)
 			os.Exit(1)
 		}
-		slog.Info("GCS_BUCKET belum diisi, menggunakan memory storage untuk pengembangan lokal")
-		store = storage.NewMemoryStorage()
+		store = localStore
 	}
 
 	svc := service.NewRetentionService(db, store, cfg)

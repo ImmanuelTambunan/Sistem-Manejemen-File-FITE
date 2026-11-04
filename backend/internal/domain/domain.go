@@ -80,20 +80,20 @@ func (m *JSONMap) Scan(src any) error {
 // Models
 
 type Role struct {
-	ID        uint      `gorm:"primaryKey"`
-	Key       string    `gorm:"column:key;size:30;uniqueIndex"`
-	Name      string    `gorm:"size:50"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Key       string    `gorm:"column:key;size:30;uniqueIndex" json:"key"`
+	Name      string    `gorm:"size:50" json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Prodi struct {
-	ID        uint      `gorm:"primaryKey"`
-	Code      string    `gorm:"size:5;uniqueIndex"`
-	Name      string    `gorm:"size:100"`
-	IsActive  bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	Code      string    `gorm:"size:5;uniqueIndex" json:"code"`
+	Name      string    `gorm:"size:100" json:"name"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (Prodi) TableName() string { return "prodi" }
@@ -132,12 +132,12 @@ type AuthSession struct {
 }
 
 type Category struct {
-	ID            uint       `gorm:"primaryKey"`
-	Name          string     `gorm:"size:100;uniqueIndex"`
-	AllowedRoles  StringList `gorm:"type:json"`
-	IsOperational bool
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID            uint       `gorm:"primaryKey" json:"id"`
+	Name          string     `gorm:"size:100;uniqueIndex" json:"name"`
+	AllowedRoles  StringList `gorm:"type:json" json:"allowed_roles"`
+	IsOperational bool       `json:"is_operational"`
+	CreatedAt     time.Time  `json:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }
 
 type Document struct {

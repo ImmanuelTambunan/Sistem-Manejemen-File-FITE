@@ -4,8 +4,10 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"io"
 	"mime/multipart"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"fite-arsip-api/internal/domain"
@@ -224,7 +226,6 @@ func TestDocumentService_LifecycleAndRBAC(t *testing.T) {
 	}
 }
 
-
 func TestDocumentService_VerificationRejectAndConflict(t *testing.T) {
 	db := setupTestDB(t)
 	memStore := storage.NewMemoryStorage()
@@ -383,6 +384,66 @@ func TestDocumentService_AtomicCompensation(t *testing.T) {
 	openErr := memStore.Ping(ctx)
 	if openErr != nil {
 		t.Fatalf("storage error: %v", openErr)
+	}
+}
+
+func TestDocumentService_WithLocalStorage(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "doc_service_local_storage_*")
+	if err != nil {
+		t.Fatalf("temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tempDir) }()
+
+	localStore, err := storage.NewLocalStorage(tempDir)
+	if err != nil {
+		t.Fatalf("new local storage: %v", err)
+	}
+
+	db := setupTestDB(t)
+	docSvc := service.NewDocumentService(db, localStore)
+	ctx := context.Background()
+
+	prodi := domain.Prodi{Code: "IF", Name: "Informatika", IsActive: true}
+	db.Create(&prodi)
+	mhs := seedUser(t, db, domain.RoleMahasiswa, "mhs_local@del.ac.id", "Secret123", true, false)
+	cat := domain.Category{Name: "Tugas Akhir", AllowedRoles: domain.StringList{domain.RoleMahasiswa}}
+	db.Create(&cat)
+
+	content := []byte("%PDF-1.4 local storage integration test document")
+	fh := createMultipartFileHeader(t, "proposal.pdf", content)
+	up, err := service.InspectUpload(fh, 10<<20)
+	if err != nil {
+		t.Fatalf("inspect upload failed: %v", err)
+	}
+	defer up.File.Close()
+
+	doc, err := docSvc.Create(ctx, service.CreateInput{
+		Actor:      mhs,
+		Title:      "Proposal TA Local",
+		CategoryID: cat.ID,
+		ProdiID:    &prodi.ID,
+		Public:     false,
+		Upload:     up,
+	})
+	if err != nil {
+		t.Fatalf("create doc failed: %v", err)
+	}
+
+	// Verify file is on disk and readable through service Download
+	rc, sz, err := docSvc.Download(ctx, mhs, doc)
+	if err != nil {
+		t.Fatalf("download content failed: %v", err)
+	}
+	if sz != int64(len(content)) {
+		t.Errorf("expected size %d, got %d", len(content), sz)
+	}
+	b, err := io.ReadAll(rc)
+	_ = rc.Close()
+	if err != nil {
+		t.Fatalf("read content failed: %v", err)
+	}
+	if !bytes.Equal(b, content) {
+		t.Errorf("read content does not match uploaded content")
 	}
 }
 
